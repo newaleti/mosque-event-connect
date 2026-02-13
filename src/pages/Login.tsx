@@ -22,7 +22,9 @@ const Login = () => {
       const res = await loginUser(email, password);
       login(res.data.user, res.data.token);
       toast.success(`Welcome back, ${res.data.user.name}!`);
-      navigate(res.data.user.role === "admin" ? "/admin" : "/dashboard");
+      const role = res.data.user.role;
+      const isAdminRole = role === "admin" || role === "mosque_admin" || role === "super_admin";
+      navigate(isAdminRole ? "/admin" : "/dashboard");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Login failed");
     } finally {
