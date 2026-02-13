@@ -1,27 +1,36 @@
 import { Event, createBooking } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, MapPin, Tag, Users } from "lucide-react";
+import { CalendarDays, MapPin, Users, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useState } from "react";
 
 interface EventCardProps {
   event: Event;
+  isBooked?: boolean;
+  onBooked?: (eventId: string) => void;
+  isPast?: boolean;
 }
 
-const EventCard = ({ event }: EventCardProps) => {
+const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventCardProps) => {
   const { user } = useAuth();
+  const [booking, setBooking] = useState(false);
 
   const handleBook = async () => {
     if (!user) {
       toast.error("Please sign in to book an event");
       return;
     }
+    setBooking(true);
     try {
       await createBooking(event._id);
       toast.success("Booking confirmed!");
+      onBooked?.(event._id);
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Booking failed");
+    } finally {
+      setBooking(false);
     }
   };
 
@@ -63,13 +72,26 @@ const EventCard = ({ event }: EventCardProps) => {
             </div>
           )}
         </div>
-        <Button
-          onClick={handleBook}
-          className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90"
-          size="sm"
-        >
-          Book Now
-        </Button>
+
+        {isBooked ? (
+          <div className="mt-3 flex items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/10 py-2 text-sm font-medium text-primary">
+            <CheckCircle className="h-4 w-4" />
+            Already Booked
+          </div>
+        ) : isPast ? (
+          <Button disabled className="mt-3 w-full" size="sm" variant="secondary">
+            Event Ended
+          </Button>
+        ) : (
+          <Button
+            onClick={handleBook}
+            disabled={booking}
+            className="mt-3 w-full"
+            size="sm"
+          >
+            {booking ? "Booking..." : "Book Now"}
+          </Button>
+        )}
       </div>
     </div>
   );

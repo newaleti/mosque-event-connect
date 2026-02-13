@@ -21,8 +21,8 @@ const Login = () => {
     try {
       const res = await loginUser(email, password);
       login(res.data.user, res.data.token);
-      toast.success("Welcome back!");
-      navigate(res.data.user.role === "admin" ? "/admin" : "/");
+      toast.success(`Welcome back, ${res.data.user.name}!`);
+      navigate(res.data.user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Login failed");
     } finally {
