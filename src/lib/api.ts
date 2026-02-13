@@ -60,6 +60,9 @@ export const createBooking = (eventId: string) =>
 export const cancelBooking = (id: string) =>
   api.delete(`/bookings/${id}`);
 
+export const getUserBookings = () =>
+  api.get<Booking[]>("/bookings");
+
 export const getEventAttendance = (eventId: string) =>
   api.get<Booking[]>(`/bookings/event/${eventId}`);
 
