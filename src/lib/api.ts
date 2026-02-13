@@ -19,7 +19,17 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  assignedMosque?: string;
 }
+
+// Map backend user shape to our User interface
+const mapUser = (backendUser: any): User => ({
+  _id: backendUser.id || backendUser._id,
+  name: backendUser.username || backendUser.name,
+  email: backendUser.email || "",
+  role: backendUser.role || "user",
+  assignedMosque: backendUser.assignedMosque,
+});
 
 export interface Event {
   _id: string;
@@ -40,8 +50,16 @@ export interface Booking {
 }
 
 // Auth
-export const loginUser = (email: string, password: string) =>
-  api.post<{ token: string; user: User }>("/auth/login", { email, password });
+export const loginUser = async (email: string, password: string) => {
+  const res = await api.post("/auth/login", { email, password });
+  return {
+    ...res,
+    data: {
+      token: res.data.token,
+      user: mapUser(res.data.user),
+    },
+  };
+};
 
 export const registerUser = (name: string, email: string, password: string) =>
   api.post("/auth/register", { name, email, password });

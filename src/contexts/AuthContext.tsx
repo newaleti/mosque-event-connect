@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("user");
   };
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "mosque_admin" || user?.role === "super_admin";
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, isAdmin }}>
