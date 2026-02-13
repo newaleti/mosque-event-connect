@@ -84,4 +84,26 @@ export const getUserBookings = () =>
 export const getEventAttendance = (eventId: string) =>
   api.get<Booking[]>(`/bookings/event/${eventId}`);
 
+// Mosques
+export interface Mosque {
+  _id: string;
+  name: string;
+  address: string;
+  description?: string;
+  location?: { type: string; coordinates: number[] };
+}
+
+export const getMosques = () =>
+  api.get<Mosque[]>("/mosques");
+
+export const createMosque = (data: { name: string; address: string; description?: string }) =>
+  api.post<Mosque>("/mosques", data);
+
+// Admin management
+export const assignMosqueAdmin = (userId: string, mosqueId: string) =>
+  api.patch(`/auth/assign-mosque/${userId}`, { mosqueId });
+
+export const unassignMosqueAdmin = (userId: string) =>
+  api.patch(`/auth/unassign-mosque/${userId}`);
+
 export default api;
