@@ -17,7 +17,7 @@ const Index = () => {
     try {
       const res = await searchEvents({
         keyword: keyword || undefined,
-        location: location || undefined,
+        location: location || undefined
       });
       setEvents(res.data.events || []);
     } catch {
@@ -55,26 +55,26 @@ const Index = () => {
       </section>
 
       {/* Search */}
-      <section className="container mx-auto -mt-6 px-4">
+      <section className="container mx-auto -mt-6 px-[17px]">
         <form
           onSubmit={handleSearch}
-          className="mx-auto flex max-w-2xl flex-col gap-3 rounded-lg border bg-card p-4 shadow-elevated sm:flex-row"
-        >
+          className="mx-auto flex max-w-2xl flex-col gap-3 rounded-lg border bg-card p-4 shadow-elevated sm:flex-row my-[30px]">
+
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search events..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="pl-9"
-            />
+              className="pl-9" />
+
           </div>
           <Input
             placeholder="Location"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="sm:w-40"
-          />
+            className="sm:w-40" />
+
           <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
             Search
           </Button>
@@ -86,28 +86,28 @@ const Index = () => {
         <h2 className="mb-6 font-display text-2xl font-semibold text-foreground">
           Upcoming Events
         </h2>
-        {loading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-72 animate-pulse rounded-lg bg-muted" />
-            ))}
-          </div>
-        ) : events.length === 0 ? (
-          <div className="rounded-lg border bg-card p-12 text-center">
+        {loading ?
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) =>
+          <div key={i} className="h-72 animate-pulse rounded-lg bg-muted" />
+          )}
+          </div> :
+        events.length === 0 ?
+        <div className="rounded-lg border bg-card p-12 text-center">
             <p className="text-muted-foreground">No events found. Try a different search.</p>
-          </div>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {events.map((event, i) => (
-              <div key={event._id} className="animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
+          </div> :
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {events.map((event, i) =>
+          <div key={event._id} className="animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
                 <EventCard event={event} />
               </div>
-            ))}
+          )}
           </div>
-        )}
+        }
       </section>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Index;
