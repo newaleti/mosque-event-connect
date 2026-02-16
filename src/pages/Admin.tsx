@@ -133,7 +133,12 @@ const Admin = () => {
       setEditingEventId(null);
       fetchEvents();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to save event");
+      const msg = err.response?.data?.message || "Failed to save event";
+      if (msg.toLowerCase().includes("not authorized") || err.response?.status === 403) {
+        toast.error("Authorization error: Please log out and log back in to refresh your permissions.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
