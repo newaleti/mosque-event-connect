@@ -65,11 +65,17 @@ export const registerUser = (name: string, email: string, password: string) =>
   api.post("/auth/register", { name, email, password });
 
 // Events
-export const searchEvents = (params?: { keyword?: string; location?: string; category?: string }) =>
+export const searchEvents = (params?: { keyword?: string; location?: string; category?: string; mosque?: string }) =>
   api.get<{ events: Event[] }>("/events/search", { params });
 
-export const createEvent = (data: Omit<Event, "_id">) =>
+export const createEvent = (data: Record<string, any>) =>
   api.post<Event>("/events", data);
+
+export const updateEvent = (id: string, data: Record<string, any>) =>
+  api.put<Event>(`/events/${id}`, data);
+
+export const deleteEvent = (id: string) =>
+  api.delete(`/events/${id}`);
 
 // Bookings
 export const createBooking = (eventId: string) =>
@@ -79,10 +85,20 @@ export const cancelBooking = (id: string) =>
   api.delete(`/bookings/${id}`);
 
 export const getUserBookings = () =>
-  api.get<Booking[]>("/bookings");
+  api.get<Booking[]>("/bookings/my-bookings");
+
+export interface AttendanceResponse {
+  eventName: string;
+  totalAttendees: number;
+  attendees: Array<{
+    _id: string;
+    user: { _id: string; username: string; email: string };
+    bookingDate: string;
+  }>;
+}
 
 export const getEventAttendance = (eventId: string) =>
-  api.get<Booking[]>(`/bookings/event/${eventId}`);
+  api.get<AttendanceResponse>(`/bookings/event/${eventId}`);
 
 // Mosques
 export interface Mosque {
