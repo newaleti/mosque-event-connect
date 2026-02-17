@@ -49,7 +49,7 @@ const emptyEventForm = {
 };
 
 const Admin = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const isSuperAdmin = user?.role === "super_admin";
   const isMosqueAdmin = user?.role === "mosque_admin";
 
@@ -114,6 +114,11 @@ const Admin = () => {
     }
   }, [user, isAdmin, isSuperAdmin]);
 
+  if (authLoading) return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
   if (!user) return <Navigate to="/login" />;
   if (!isAdmin) return <Navigate to="/" />;
 
@@ -591,6 +596,8 @@ const Admin = () => {
                     <TableRow>
                       <TableHead>#</TableHead>
                       <TableHead>Name</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Gender</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Booking Date</TableHead>
                     </TableRow>
@@ -600,6 +607,8 @@ const Admin = () => {
                       <TableRow key={a._id}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                         <TableCell className="font-medium">{a.user?.username || "N/A"}</TableCell>
+                        <TableCell>{a.user?.phone || "N/A"}</TableCell>
+                        <TableCell className="capitalize">{a.user?.gender || "N/A"}</TableCell>
                         <TableCell>{a.user?.email || "N/A"}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {(() => { try { return format(new Date(a.bookingDate), "MMM d, yyyy"); } catch { return "N/A"; } })()}

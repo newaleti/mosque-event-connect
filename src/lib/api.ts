@@ -61,8 +61,8 @@ export const loginUser = async (email: string, password: string) => {
   };
 };
 
-export const registerUser = (name: string, email: string, password: string) =>
-  api.post("/auth/register", { name, email, password });
+export const registerUser = (name: string, email: string, password: string, phone?: string, gender?: string) =>
+  api.post("/auth/register", { name, email, password, phone, gender });
 
 // Events
 export const searchEvents = (params?: { keyword?: string; location?: string; category?: string; mosque?: string }) =>
@@ -92,7 +92,7 @@ export interface AttendanceResponse {
   totalAttendees: number;
   attendees: Array<{
     _id: string;
-    user: { _id: string; username: string; email: string };
+    user: { _id: string; username: string; email: string; phone?: string; gender?: string };
     bookingDate: string;
   }>;
 }
