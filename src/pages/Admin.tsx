@@ -161,7 +161,7 @@ const Admin = () => {
       description: event.description,
       date: event.date ? formatLocalDatetime(new Date(event.date)) : "",
       location: event.location,
-      eventType: event.category || "Muhadera",
+      eventType: (event as any).eventType || event.category || "Muhadera",
       capacity: String((event as any).capacity || ""),
       image: (event as any).image || "",
     });
