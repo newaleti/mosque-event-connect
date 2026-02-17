@@ -30,6 +30,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
+/** Format a Date to local "YYYY-MM-DDTHH:mm" for datetime-local inputs */
+const formatLocalDatetime = (d: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const EVENT_TYPES = [
   { value: "Muhadera", label: "Muhadera" },
   { value: "Ders", label: "Ders" },
@@ -153,7 +159,7 @@ const Admin = () => {
     setEventForm({
       title: event.title,
       description: event.description,
-      date: event.date ? new Date(event.date).toISOString().slice(0, 16) : "",
+      date: event.date ? formatLocalDatetime(new Date(event.date)) : "",
       location: event.location,
       eventType: event.category || "Muhadera",
       capacity: String((event as any).capacity || ""),
