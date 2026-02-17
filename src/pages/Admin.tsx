@@ -70,6 +70,7 @@ const Admin = () => {
 
   // Mosque state (super admin)
   const [mosques, setMosques] = useState<Mosque[]>([]);
+  const [mosqueName, setMosqueName] = useState<string>("");
   const [showMosqueForm, setShowMosqueForm] = useState(false);
   const [mosqueLoading, setMosqueLoading] = useState(false);
   const [mosqueForm, setMosqueForm] = useState({ name: "", address: "", description: "" });
@@ -102,9 +103,14 @@ const Admin = () => {
   useEffect(() => {
     if (user && isAdmin) {
       fetchEvents();
-      if (isSuperAdmin) {
-        getMosques().then((res) => setMosques(res.data || [])).catch(() => {});
-      }
+      getMosques().then((res) => {
+        const list = res.data || [];
+        setMosques(list);
+        if (isMosqueAdmin && user.assignedMosque) {
+          const found = list.find((m: Mosque) => m._id === user.assignedMosque);
+          if (found) setMosqueName(found.name);
+        }
+      }).catch(() => {});
     }
   }, [user, isAdmin, isSuperAdmin]);
 
@@ -253,7 +259,7 @@ const Admin = () => {
           <div className="flex items-center gap-2 mb-1">
             <Shield className="h-6 w-6 text-accent" />
             <h1 className="font-display text-3xl font-bold text-foreground">
-              {isSuperAdmin ? "Super Admin Dashboard" : "Mosque Admin Dashboard"}
+              {isSuperAdmin ? "Super Admin Dashboard" : mosqueName ? `${mosqueName} Dashboard` : "Mosque Admin Dashboard"}
             </h1>
           </div>
           <p className="text-sm text-muted-foreground">
