@@ -108,6 +108,10 @@ const Admin = () => {
   // --- Event CRUD ---
   const handleSubmitEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (new Date(eventForm.date) < new Date()) {
+      toast.error("Cannot save an event with a past date.");
+      return;
+    }
     setLoading(true);
     try {
       const payload: Record<string, any> = {
