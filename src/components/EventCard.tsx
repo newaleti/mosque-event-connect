@@ -114,7 +114,7 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
       <div className="group flex flex-col overflow-hidden rounded-lg border bg-card shadow-card transition-all hover:shadow-elevated hover:-translate-y-1">
         <div className="gradient-hero p-4">
           <span className="inline-block rounded-full bg-background/20 px-3 py-1 text-xs font-medium text-primary-foreground backdrop-blur-sm">
-            {event.category || "General"}
+            {event.eventType || event.category || "General"}
           </span>
         </div>
         <div className="flex flex-1 flex-col gap-3 p-5">

@@ -440,7 +440,7 @@ const Admin = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-display text-lg font-semibold text-card-foreground">{event.title}</h3>
-                        <Badge variant="secondary" className="text-xs">{event.category || (event as any).eventType || "Event"}</Badge>
+                        <Badge variant="secondary" className="text-xs">{(event as any).eventType || event.category || "Event"}</Badge>
                         {(event as any).bookedCount > 0 && (
                           <Badge variant="outline" className="text-xs">
                             <Users className="h-3 w-3 mr-1" /> {(event as any).bookedCount} booked
@@ -547,8 +547,8 @@ const Admin = () => {
                       {membershipRequests.map((req, i) => (
                         <TableRow key={req._id}>
                           <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                          <TableCell className="font-medium">{req.user?.username || "N/A"}</TableCell>
-                          <TableCell>{req.user?.phone || "N/A"}</TableCell>
+                          <TableCell className="font-medium">{req.user?.firstName && req.user?.lastName ? `${req.user.firstName} ${req.user.lastName}` : req.user?.username || "N/A"}</TableCell>
+                          <TableCell>{req.user?.phoneNumber || req.user?.phone || "N/A"}</TableCell>
                           <TableCell className="capitalize">{req.user?.gender || "N/A"}</TableCell>
                           <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">{req.message || "—"}</TableCell>
                           <TableCell>
@@ -731,8 +731,8 @@ const Admin = () => {
                     {attendanceData.attendees.map((a, i) => (
                       <TableRow key={a._id}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="font-medium">{a.user?.username || "N/A"}</TableCell>
-                        <TableCell>{a.user?.phone || "N/A"}</TableCell>
+                        <TableCell className="font-medium">{a.user?.firstName && a.user?.lastName ? `${a.user.firstName} ${a.user.lastName}` : a.user?.username || "N/A"}</TableCell>
+                        <TableCell>{a.user?.phoneNumber || a.user?.phone || "N/A"}</TableCell>
                         <TableCell className="capitalize">{a.user?.gender || "N/A"}</TableCell>
                         <TableCell>{a.user?.email || "N/A"}</TableCell>
                         <TableCell className="text-muted-foreground">
