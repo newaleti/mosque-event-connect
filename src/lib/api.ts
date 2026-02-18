@@ -39,7 +39,8 @@ export interface Event {
   description: string;
   date: string;
   location: string;
-  category: string;
+  category?: string;
+  eventType?: string;
   capacity?: number;
   createdBy?: string;
   accessType?: string;
@@ -96,7 +97,7 @@ export interface AttendanceResponse {
   totalAttendees: number;
   attendees: Array<{
     _id: string;
-    user: { _id: string; username: string; email: string; phone?: string; gender?: string };
+    user: { _id: string; firstName?: string; lastName?: string; username?: string; email: string; phoneNumber?: string; phone?: string; gender?: string };
     bookingDate: string;
   }>;
 }
@@ -129,7 +130,7 @@ export const unassignMosqueAdmin = (userId: string) =>
 // Membership
 export interface MembershipRequest {
   _id: string;
-  user: { _id: string; username: string; email: string; phone?: string; gender?: string; age?: number };
+  user: { _id: string; firstName?: string; lastName?: string; username?: string; email: string; phoneNumber?: string; phone?: string; gender?: string; age?: number };
   mosque: string;
   message: string;
   status: string;
