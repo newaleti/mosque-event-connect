@@ -26,6 +26,8 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
   const hasMembership = membershipStatus === "student" || membershipStatus === "official_member";
 
   const mosqueId = typeof event.mosque === "object" && event.mosque ? event.mosque._id : (event.mosque as string) || "";
+  const mosqueName = typeof event.mosque === "object" && event.mosque ? event.mosque.name : "";
+  const isMemberOfThisMosque = hasMembership && user?.assignedMosque === mosqueId;
 
   const handleBook = async () => {
     if (!user) {
@@ -68,7 +70,7 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
         </Button>
       );
     }
-    if (isRestricted && !hasMembership) {
+    if (isRestricted && !hasMembership && !isMemberOfThisMosque) {
       if (applicationPending) {
         return (
           <Button disabled className="mt-3 w-full" size="sm" variant="secondary">
@@ -116,10 +118,12 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
           </span>
         </div>
         <div className="flex flex-1 flex-col gap-3 p-5">
-          <h3 className="font-display text-lg font-semibold text-card-foreground line-clamp-2 flex items-center gap-1.5">
-            {isRestricted && <Lock className="h-4 w-4 text-muted-foreground shrink-0" />}
+          <h3 className="font-display text-lg font-semibold text-card-foreground line-clamp-2">
             {event.title}
           </h3>
+          {mosqueName && (
+            <p className="text-xs font-medium text-accent">{mosqueName}</p>
+          )}
           <p className="text-sm text-muted-foreground line-clamp-2">
             {event.description}
           </p>
