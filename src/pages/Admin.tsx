@@ -3,7 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   createEvent, updateEvent, deleteEvent, searchEvents, getEventAttendance,
   getMosques, createMosque, assignMosqueAdmin, unassignMosqueAdmin,
-  Event, Mosque, AttendanceResponse,
+  getMosqueMembershipRequests, decideMembershipRequest,
+  Event, Mosque, AttendanceResponse, MembershipRequest,
 } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import {
   CalendarDays, MapPin, Plus, Users, ChevronDown, ChevronUp,
-  Building2, UserCog, Shield, Pencil, Trash2, BarChart3, X,
+  Building2, UserCog, Shield, Pencil, Trash2, BarChart3, X, ClipboardList, Search,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,6 +81,12 @@ const Admin = () => {
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignForm, setAssignForm] = useState({ userId: "", mosqueId: "" });
 
+  // Membership requests state
+  const [membershipRequests, setMembershipRequests] = useState<MembershipRequest[]>([]);
+  const [membershipLoading, setMembershipLoading] = useState(false);
+  const [membershipSearch, setMembershipSearch] = useState("");
+  const [membershipGenderFilter, setMembershipGenderFilter] = useState("");
+
   // Stats
   const totalEvents = events.length;
   const totalBookings = useMemo(
@@ -111,8 +118,34 @@ const Admin = () => {
           if (found) setMosqueName(found.name);
         }
       }).catch(() => {});
+      if (isMosqueAdmin) fetchMembershipRequests();
     }
   }, [user, isAdmin, isSuperAdmin]);
+
+  const fetchMembershipRequests = async (name?: string, gender?: string) => {
+    setMembershipLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (name) params.name = name;
+      if (gender) params.gender = gender;
+      const res = await getMosqueMembershipRequests(params);
+      setMembershipRequests(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      toast.error("Failed to load membership requests");
+    } finally {
+      setMembershipLoading(false);
+    }
+  };
+
+  const handleMembershipDecision = async (id: string, status: string) => {
+    try {
+      await decideMembershipRequest(id, status);
+      toast.success(status === "approved" ? "User upgraded to Student status." : "Request rejected.");
+      fetchMembershipRequests(membershipSearch || undefined, membershipGenderFilter || undefined);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to process request");
+    }
+  };
 
   if (authLoading) return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -312,6 +345,11 @@ const Admin = () => {
             <TabsTrigger value="events" className="gap-1.5">
               <CalendarDays className="h-4 w-4" /> Events
             </TabsTrigger>
+            {isMosqueAdmin && (
+              <TabsTrigger value="membership" className="gap-1.5">
+                <ClipboardList className="h-4 w-4" /> Membership Requests
+              </TabsTrigger>
+            )}
             {isSuperAdmin && (
               <>
                 <TabsTrigger value="mosques" className="gap-1.5">
@@ -451,6 +489,93 @@ const Admin = () => {
               ))}
             </div>
           </TabsContent>
+
+          {/* ===== MEMBERSHIP REQUESTS TAB (Mosque Admin) ===== */}
+          {isMosqueAdmin && (
+            <TabsContent value="membership" className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <h2 className="font-display text-xl font-semibold text-foreground">Membership Requests</h2>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name..."
+                      value={membershipSearch}
+                      onChange={(e) => setMembershipSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") fetchMembershipRequests(membershipSearch || undefined, membershipGenderFilter || undefined); }}
+                      className="pl-9 sm:w-48"
+                    />
+                  </div>
+                  <Select value={membershipGenderFilter} onValueChange={(v) => {
+                    setMembershipGenderFilter(v === "all" ? "" : v);
+                    fetchMembershipRequests(membershipSearch || undefined, v === "all" ? undefined : v);
+                  }}>
+                    <SelectTrigger className="w-32"><SelectValue placeholder="Gender" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {membershipLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                </div>
+              ) : membershipRequests.length === 0 ? (
+                <div className="rounded-lg border bg-card p-12 text-center">
+                  <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">No membership requests.</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>#</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Gender</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {membershipRequests.map((req, i) => (
+                        <TableRow key={req._id}>
+                          <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                          <TableCell className="font-medium">{req.user?.username || "N/A"}</TableCell>
+                          <TableCell>{req.user?.phone || "N/A"}</TableCell>
+                          <TableCell className="capitalize">{req.user?.gender || "N/A"}</TableCell>
+                          <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">{req.message || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant={req.status === "approved" ? "default" : req.status === "rejected" ? "destructive" : "secondary"}>
+                              {req.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {req.status === "pending" && (
+                              <div className="flex justify-end gap-1">
+                                <Button size="sm" onClick={() => handleMembershipDecision(req._id, "approved")}>
+                                  Approve
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleMembershipDecision(req._id, "rejected")}>
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          )}
 
           {/* ===== MOSQUES TAB (Super Admin Only) ===== */}
           {isSuperAdmin && (

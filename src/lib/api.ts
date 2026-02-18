@@ -20,6 +20,7 @@ export interface User {
   email: string;
   role: string;
   assignedMosque?: string;
+  membershipStatus?: string;
 }
 
 // Map backend user shape to our User interface
@@ -29,6 +30,7 @@ const mapUser = (backendUser: any): User => ({
   email: backendUser.email || "",
   role: backendUser.role || "user",
   assignedMosque: backendUser.assignedMosque,
+  membershipStatus: backendUser.membershipStatus || "none",
 });
 
 export interface Event {
@@ -40,6 +42,8 @@ export interface Event {
   category: string;
   capacity?: number;
   createdBy?: string;
+  accessType?: string;
+  mosque?: { _id: string; name: string } | string;
 }
 
 export interface Booking {
@@ -121,5 +125,24 @@ export const assignMosqueAdmin = (userId: string, mosqueId: string) =>
 
 export const unassignMosqueAdmin = (userId: string) =>
   api.patch(`/auth/unassign-mosque/${userId}`);
+
+// Membership
+export interface MembershipRequest {
+  _id: string;
+  user: { _id: string; username: string; email: string; phone?: string; gender?: string; age?: number };
+  mosque: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
+export const applyForMembership = (mosqueId: string, message: string) =>
+  api.post("/membership/apply", { mosqueId, message });
+
+export const getMosqueMembershipRequests = (params?: { name?: string; gender?: string }) =>
+  api.get<MembershipRequest[]>("/membership/mosque-requests", { params });
+
+export const decideMembershipRequest = (id: string, status: string) =>
+  api.put(`/membership/${id}/decide`, { status });
 
 export default api;
