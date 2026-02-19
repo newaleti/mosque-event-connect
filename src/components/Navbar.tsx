@@ -1,10 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Moon, User, LayoutDashboard } from "lucide-react";
+import { LogOut, Moon, User, LayoutDashboard, BookOpen } from "lucide-react";
 
 const Navbar = () => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isTeacher } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -30,6 +30,14 @@ const Navbar = () => {
                   <Link to="/admin">
                     <LayoutDashboard className="mr-1.5 h-4 w-4" />
                     Dashboard
+                  </Link>
+                </Button>
+              )}
+              {isTeacher && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/teacher">
+                    <BookOpen className="mr-1.5 h-4 w-4" />
+                    Madrasa
                   </Link>
                 </Button>
               )}

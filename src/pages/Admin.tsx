@@ -4,6 +4,7 @@ import {
   createEvent, updateEvent, deleteEvent, searchEvents, getEventAttendance,
   getMosques, createMosque, assignMosqueAdmin, unassignMosqueAdmin,
   getMosqueMembershipRequests, decideMembershipRequest,
+  promoteToTeacher, assignTeacherToEvent,
   Event, Mosque, AttendanceResponse, MembershipRequest,
 } from "@/lib/api";
 import Navbar from "@/components/Navbar";
@@ -20,7 +21,7 @@ import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import {
   CalendarDays, MapPin, Plus, Users, ChevronDown, ChevronUp,
-  Building2, UserCog, Shield, Pencil, Trash2, BarChart3, X, ClipboardList, Search,
+  Building2, UserCog, Shield, Pencil, Trash2, BarChart3, X, ClipboardList, Search, GraduationCap,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -87,6 +88,12 @@ const Admin = () => {
   const [membershipSearch, setMembershipSearch] = useState("");
   const [membershipGenderFilter, setMembershipGenderFilter] = useState("");
 
+  // Teacher management state
+  const [teacherPromoteId, setTeacherPromoteId] = useState("");
+  const [teacherPromoteLoading, setTeacherPromoteLoading] = useState(false);
+  const [teacherAssignEventId, setTeacherAssignEventId] = useState("");
+  const [teacherAssignTeacherId, setTeacherAssignTeacherId] = useState("");
+  const [teacherAssignLoading, setTeacherAssignLoading] = useState(false);
   // Stats
   const totalEvents = events.length;
   const totalBookings = useMemo(
@@ -347,7 +354,12 @@ const Admin = () => {
             </TabsTrigger>
             {isMosqueAdmin && (
               <TabsTrigger value="membership" className="gap-1.5">
-                <ClipboardList className="h-4 w-4" /> Membership Requests
+                <ClipboardList className="h-4 w-4" /> Membership
+              </TabsTrigger>
+            )}
+            {isMosqueAdmin && (
+              <TabsTrigger value="teachers" className="gap-1.5">
+                <GraduationCap className="h-4 w-4" /> Teachers
               </TabsTrigger>
             )}
             {isSuperAdmin && (
@@ -577,7 +589,91 @@ const Admin = () => {
             </TabsContent>
           )}
 
-          {/* ===== MOSQUES TAB (Super Admin Only) ===== */}
+          {/* ===== TEACHERS TAB (Mosque Admin) ===== */}
+          {isMosqueAdmin && (
+            <TabsContent value="teachers" className="space-y-6">
+              <div className="space-y-4">
+                <h2 className="font-display text-xl font-semibold text-foreground">Promote Member to Teacher</h2>
+                <p className="text-sm text-muted-foreground">Enter a user ID of a mosque member to promote them to teacher role.</p>
+                <div className="flex gap-3 max-w-lg">
+                  <Input
+                    placeholder="User ID"
+                    value={teacherPromoteId}
+                    onChange={(e) => setTeacherPromoteId(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    disabled={teacherPromoteLoading || !teacherPromoteId}
+                    onClick={async () => {
+                      setTeacherPromoteLoading(true);
+                      try {
+                        await promoteToTeacher(teacherPromoteId);
+                        toast.success("User promoted to Teacher successfully");
+                        setTeacherPromoteId("");
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.message || "Failed to promote user");
+                      } finally {
+                        setTeacherPromoteLoading(false);
+                      }
+                    }}
+                  >
+                    <GraduationCap className="h-4 w-4 mr-1" />
+                    {teacherPromoteLoading ? "Promoting..." : "Promote to Teacher"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h2 className="font-display text-xl font-semibold text-foreground">Assign Teacher to Event</h2>
+                <p className="text-sm text-muted-foreground">Assign a teacher to a Ders or Muhadera event.</p>
+                <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+                  <div className="space-y-1.5">
+                    <Label>Event (Ders/Muhadera only)</Label>
+                    <Select value={teacherAssignEventId} onValueChange={setTeacherAssignEventId}>
+                      <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
+                      <SelectContent>
+                        {events
+                          .filter((e) => {
+                            const type = (e as any).eventType || e.category || "";
+                            return type === "Ders" || type === "Muhadera";
+                          })
+                          .map((e) => (
+                            <SelectItem key={e._id} value={e._id}>{e.title}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Teacher ID</Label>
+                    <Input
+                      placeholder="Teacher's User ID"
+                      value={teacherAssignTeacherId}
+                      onChange={(e) => setTeacherAssignTeacherId(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button
+                  disabled={teacherAssignLoading || !teacherAssignEventId || !teacherAssignTeacherId}
+                  onClick={async () => {
+                    setTeacherAssignLoading(true);
+                    try {
+                      await assignTeacherToEvent(teacherAssignEventId, teacherAssignTeacherId);
+                      toast.success("Teacher assigned to event successfully");
+                      setTeacherAssignEventId("");
+                      setTeacherAssignTeacherId("");
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.message || "Failed to assign teacher");
+                    } finally {
+                      setTeacherAssignLoading(false);
+                    }
+                  }}
+                >
+                  {teacherAssignLoading ? "Assigning..." : "Assign Teacher"}
+                </Button>
+              </div>
+            </TabsContent>
+          )}
+
           {isSuperAdmin && (
             <TabsContent value="mosques" className="space-y-4">
               <div className="flex justify-end">
