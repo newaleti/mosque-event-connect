@@ -127,6 +127,69 @@ export const assignMosqueAdmin = (userId: string, mosqueId: string) =>
 export const unassignMosqueAdmin = (userId: string) =>
   api.patch(`/auth/unassign-mosque/${userId}`);
 
+// Teacher management
+export const promoteToTeacher = (userId: string) =>
+  api.patch(`/auth/assign-teacher/${userId}`);
+
+export const assignTeacherToEvent = (eventId: string, teacherId: string) =>
+  api.patch(`/auth/assign-teacher-to-event/${eventId}`, { teacherId });
+
+export const getTeacherEvents = (teacherId: string) =>
+  api.get<{ events: Event[] }>("/events/search", { params: { teacherId } });
+
+// Attendance
+export interface AttendanceRecord {
+  student: string;
+  status: "present" | "absent" | "late";
+  note?: string;
+}
+
+export interface AttendanceEntry {
+  _id: string;
+  event: string;
+  teacher: string;
+  date: string;
+  records: Array<{
+    student: { _id: string; firstName?: string; lastName?: string } | string;
+    status: string;
+    note?: string;
+  }>;
+}
+
+export const submitAttendance = (eventId: string, records: AttendanceRecord[], date?: string) =>
+  api.post("/attendance/submit", { eventId, records, date });
+
+export const getEventAttendanceRecords = (eventId: string) =>
+  api.get<AttendanceEntry[]>(`/attendance/${eventId}`);
+
+// Marklist
+export interface MarklistEntry {
+  _id: string;
+  event: string;
+  student: { _id: string; firstName?: string; lastName?: string } | string;
+  teacher: string;
+  attendanceScore: number;
+  testScore: number;
+  midExam: number;
+  finalExam: number;
+  totalScore: number;
+  grade?: string;
+  teacherNote?: string;
+}
+
+export const upsertMarklist = (data: {
+  eventId: string;
+  studentId: string;
+  attendanceScore?: number;
+  quizScore?: number;
+  midExam?: number;
+  finalExam?: number;
+  teacherNote?: string;
+}) => api.post("/marklist/upsert", data);
+
+export const getEventMarklist = (eventId: string) =>
+  api.get<MarklistEntry[]>(`/marklist/event/${eventId}`);
+
 // Membership
 export interface MembershipRequest {
   _id: string;
