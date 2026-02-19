@@ -59,7 +59,8 @@ const TeacherDashboard = () => {
     setLoading(true);
     try {
       const res = await getTeacherEvents(user._id);
-      setEvents(res.data.events || []);
+      const allEvents = res.data.events || [];
+      setEvents(allEvents.filter((e: Event) => e.eventType === "Ders" || e.eventType === "Muhadera"));
     } catch {
       toast.error("Failed to load your classes");
     } finally {
