@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getTeacherEvents, getEventAttendanceRecords, submitAttendance,
-  getEventMarklist, upsertMarklist, getEventAttendance,
+  getEventMarklist, upsertMarklist, getEventStudents,
   Event, AttendanceEntry, MarklistEntry, AttendanceRecord,
 } from "@/lib/api";
 import Navbar from "@/components/Navbar";
@@ -28,9 +28,12 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-interface StudentBooking {
+interface StudentEntry {
   _id: string;
-  user: { _id: string; firstName?: string; lastName?: string; username?: string; email: string };
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email: string;
 }
 
 const TeacherDashboard = () => {
@@ -41,7 +44,7 @@ const TeacherDashboard = () => {
   const [activeTab, setActiveTab] = useState("classes");
 
   // Attendance state
-  const [students, setStudents] = useState<StudentBooking[]>([]);
+  const [students, setStudents] = useState<StudentEntry[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, "present" | "absent" | "late">>({});
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceHistory, setAttendanceHistory] = useState<AttendanceEntry[]>([]);
@@ -84,7 +87,7 @@ const TeacherDashboard = () => {
   if (!isTeacher) return <Navigate to="/" />;
 
   const getStudentName = (s: any) =>
-    s?.firstName && s?.lastName ? `${s.firstName} ${s.lastName}` : s?.username || "Unknown";
+    s?.firstName && s?.lastName ? `${s.firstName} ${s.lastName}` : s?.username || s?.email || "Unknown";
 
   // --- Attendance ---
   const openAttendance = async (event: Event) => {
@@ -93,12 +96,11 @@ const TeacherDashboard = () => {
     setAttendanceLoading(true);
     setAttendanceRecords({});
     try {
-      // Fetch booked students for this event
-      const res = await getEventAttendance(event._id);
-      const bookings = res.data.attendees || [];
-      setStudents(bookings.map((b: any) => ({ _id: b._id, user: b.user })));
+      const res = await getEventStudents(event._id);
+      const studentList: StudentEntry[] = Array.isArray(res.data) ? res.data : [];
+      setStudents(studentList);
       const defaults: Record<string, "present" | "absent" | "late"> = {};
-      bookings.forEach((b: any) => { defaults[b.user._id] = "present"; });
+      studentList.forEach((s) => { defaults[s._id] = "present"; });
       setAttendanceRecords(defaults);
 
       // Fetch history
@@ -131,21 +133,20 @@ const TeacherDashboard = () => {
     setShowMarklist(true);
     setMarklistLoading(true);
     try {
-      // Get students
-      const res = await getEventAttendance(event._id);
-      const bookings = res.data.attendees || [];
-      setStudents(bookings.map((b: any) => ({ _id: b._id, user: b.user })));
+      const res = await getEventStudents(event._id);
+      const studentList: StudentEntry[] = Array.isArray(res.data) ? res.data : [];
+      setStudents(studentList);
 
       // Get existing marks
       const marksRes = await getEventMarklist(event._id);
       const marks = Array.isArray(marksRes.data) ? marksRes.data : [];
       const markMap: typeof marklistData = {};
-      bookings.forEach((b: any) => {
+      studentList.forEach((s) => {
         const existing = marks.find((m: any) => {
           const sid = typeof m.student === "object" ? m.student._id : m.student;
-          return sid === b.user._id;
+          return sid === s._id;
         });
-        markMap[b.user._id] = {
+        markMap[s._id] = {
           attendanceScore: existing?.attendanceScore || 0,
           testScore: existing?.testScore || 0,
           midExam: existing?.midExam || 0,
@@ -230,6 +231,9 @@ const TeacherDashboard = () => {
                 </div>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg">{event.title}</CardTitle>
+                  {event.mosque && typeof event.mosque === "object" && (
+                    <p className="text-xs text-muted-foreground">{event.mosque.name}</p>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
@@ -286,13 +290,13 @@ const TeacherDashboard = () => {
                   </TableHeader>
                   <TableBody>
                     {students.map((s, i) => (
-                      <TableRow key={s.user._id}>
+                      <TableRow key={s._id}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="font-medium">{getStudentName(s.user)}</TableCell>
+                        <TableCell className="font-medium">{getStudentName(s)}</TableCell>
                         <TableCell>
                           <Select
-                            value={attendanceRecords[s.user._id] || "present"}
-                            onValueChange={(v) => setAttendanceRecords((prev) => ({ ...prev, [s.user._id]: v as any }))}
+                            value={attendanceRecords[s._id] || "present"}
+                            onValueChange={(v) => setAttendanceRecords((prev) => ({ ...prev, [s._id]: v as any }))}
                           >
                             <SelectTrigger className="w-28">
                               <SelectValue />
@@ -364,18 +368,18 @@ const TeacherDashboard = () => {
                 </TableHeader>
                 <TableBody>
                   {students.map((s, i) => {
-                    const data = marklistData[s.user._id] || { attendanceScore: 0, testScore: 0, midExam: 0, finalExam: 0, teacherNote: "" };
+                    const data = marklistData[s._id] || { attendanceScore: 0, testScore: 0, midExam: 0, finalExam: 0, teacherNote: "" };
                     const total = (data.attendanceScore || 0) + (data.testScore || 0) + (data.midExam || 0) + (data.finalExam || 0);
                     return (
-                      <TableRow key={s.user._id}>
+                      <TableRow key={s._id}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="font-medium whitespace-nowrap">{getStudentName(s.user)}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">{getStudentName(s)}</TableCell>
                         <TableCell>
                           <Input
                             type="number" min={0} max={10}
                             className="w-16 mx-auto text-center"
                             value={data.attendanceScore}
-                            onChange={(e) => updateMark(s.user._id, "attendanceScore", Math.min(10, Math.max(0, Number(e.target.value))))}
+                            onChange={(e) => updateMark(s._id, "attendanceScore", Math.min(10, Math.max(0, Number(e.target.value))))}
                           />
                         </TableCell>
                         <TableCell>
@@ -383,7 +387,7 @@ const TeacherDashboard = () => {
                             type="number" min={0} max={20}
                             className="w-16 mx-auto text-center"
                             value={data.testScore}
-                            onChange={(e) => updateMark(s.user._id, "testScore", Math.min(20, Math.max(0, Number(e.target.value))))}
+                            onChange={(e) => updateMark(s._id, "testScore", Math.min(20, Math.max(0, Number(e.target.value))))}
                           />
                         </TableCell>
                         <TableCell>
@@ -391,7 +395,7 @@ const TeacherDashboard = () => {
                             type="number" min={0} max={30}
                             className="w-16 mx-auto text-center"
                             value={data.midExam}
-                            onChange={(e) => updateMark(s.user._id, "midExam", Math.min(30, Math.max(0, Number(e.target.value))))}
+                            onChange={(e) => updateMark(s._id, "midExam", Math.min(30, Math.max(0, Number(e.target.value))))}
                           />
                         </TableCell>
                         <TableCell>
@@ -399,7 +403,7 @@ const TeacherDashboard = () => {
                             type="number" min={0} max={40}
                             className="w-16 mx-auto text-center"
                             value={data.finalExam}
-                            onChange={(e) => updateMark(s.user._id, "finalExam", Math.min(40, Math.max(0, Number(e.target.value))))}
+                            onChange={(e) => updateMark(s._id, "finalExam", Math.min(40, Math.max(0, Number(e.target.value))))}
                           />
                         </TableCell>
                         <TableCell className="text-center font-bold text-foreground">{total}</TableCell>
