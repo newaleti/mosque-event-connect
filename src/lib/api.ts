@@ -45,6 +45,7 @@ export interface Event {
   createdBy?: string;
   accessType?: string;
   mosque?: { _id: string; name: string } | string;
+  teacher?: string | { _id: string };
 }
 
 export interface Booking {
@@ -135,7 +136,7 @@ export const assignTeacherToEvent = (eventId: string, teacherId: string) =>
   api.patch(`/auth/assign-teacher-to-event/${eventId}`, { teacherId });
 
 export const getTeacherEvents = (teacherId: string) =>
-  api.get<{ events: Event[] }>("/events/search", { params: { teacherId } });
+  api.get<{ events: Event[] }>("/events/search", { params: { teacher: teacherId } });
 
 // Attendance
 export interface AttendanceRecord {
