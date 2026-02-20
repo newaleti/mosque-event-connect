@@ -106,6 +106,9 @@ export interface AttendanceResponse {
 export const getEventAttendance = (eventId: string) =>
   api.get<AttendanceResponse>(`/bookings/event/${eventId}`);
 
+export const getEventStudents = (eventId: string) =>
+  api.get<Array<{ _id: string; firstName?: string; lastName?: string; username?: string; email: string }>>(`/bookings/event-students/${eventId}`);
+
 // Mosques
 export interface Mosque {
   _id: string;
