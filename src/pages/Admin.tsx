@@ -113,7 +113,7 @@ const Admin = () => {
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
-  const [mosqueFilter, setMosqueFilter] = useState("");
+  const [mosqueFilter, setMosqueFilter] = useState("all");
 
   // Attendance state
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
@@ -169,7 +169,7 @@ const Admin = () => {
       const params: Record<string, string> = {};
       if (isMosqueAdmin && user?.assignedMosque) {
         params.mosque = user.assignedMosque;
-      } else if (mosqueFilter) {
+      } else if (mosqueFilter && mosqueFilter !== "all") {
         params.mosque = mosqueFilter;
       }
       if (eventTypeFilter && eventTypeFilter !== "all") {
@@ -590,7 +590,7 @@ const Admin = () => {
                       <SelectValue placeholder="All mosques" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Mosques</SelectItem>
+                      <SelectItem value="all">All Mosques</SelectItem>
                       {mosques.map((mosque) => (
                         <SelectItem key={mosque._id} value={mosque._id}>
                           {mosque.name}
