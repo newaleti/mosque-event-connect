@@ -11,10 +11,13 @@ import { toast } from "sonner";
 import { Moon } from "lucide-react";
 
 const Register = () => {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -23,7 +26,16 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await registerUser(name, email, password, phone || undefined, gender || undefined);
+      await registerUser({
+        firstName,
+        lastName,
+        username,
+        email,
+        password,
+        age: age ? Number(age) : undefined,
+        gender: gender || undefined,
+        phoneNumber: phoneNumber || undefined,
+      });
       toast.success("Account created! Please sign in.");
       navigate("/login");
     } catch (err: any) {
@@ -45,17 +57,66 @@ const Register = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 rounded-lg border bg-card p-6 shadow-card">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Mohammed"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Ahmed"
+              />
+            </div>
+          </div>
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="mohammed123"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+252 xxx xxx xxx" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                required
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="0911223344"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="age">Age</Label>
+              <Input
+                id="age"
+                type="number"
+                min={1}
+                required
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="20"
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="gender">Gender</Label>

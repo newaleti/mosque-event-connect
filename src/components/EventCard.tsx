@@ -1,7 +1,14 @@
 import { Event } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, MapPin, Users, CheckCircle, Lock, Clock } from "lucide-react";
+import {
+  CalendarDays,
+  MapPin,
+  Users,
+  CheckCircle,
+  Lock,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -13,9 +20,18 @@ interface EventCardProps {
   isBooked?: boolean;
   onBooked?: (eventId: string) => void;
   isPast?: boolean;
+  isMembershipPending?: boolean;
+  onMembershipApplied?: (mosqueId: string) => void;
 }
 
-const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventCardProps) => {
+const EventCard = ({
+  event,
+  isBooked = false,
+  onBooked,
+  isPast = false,
+  isMembershipPending,
+  onMembershipApplied,
+}: EventCardProps) => {
   const { user } = useAuth();
   const [booking, setBooking] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
@@ -23,11 +39,48 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
 
   const isRestricted = event.accessType === "restricted";
   const membershipStatus = user?.membershipStatus || "none";
-  const hasMembership = membershipStatus === "student" || membershipStatus === "official_member";
+  const hasGlobalMembership =
+    membershipStatus === "student" || membershipStatus === "official_member";
 
-  const mosqueId = typeof event.mosque === "object" && event.mosque ? event.mosque._id : (event.mosque as string) || "";
-  const mosqueName = typeof event.mosque === "object" && event.mosque ? event.mosque.name : "";
-  const isMemberOfThisMosque = hasMembership && user?.assignedMosque === mosqueId;
+  const mosqueId =
+    typeof event.mosque === "object" && event.mosque
+      ? event.mosque._id
+      : (event.mosque as string) || "";
+  const mosqueName =
+    typeof event.mosque === "object" && event.mosque ? event.mosque.name : "";
+  const membershipForMosque = user?.mosqueMemberships?.find(
+    (m) => m.mosque === mosqueId,
+  );
+  const hasMembershipForMosque =
+    membershipForMosque?.status === "student" ||
+    membershipForMosque?.status === "official_member";
+  const isMemberOfThisMosque =
+    hasMembershipForMosque ||
+    (hasGlobalMembership && user?.assignedMosque === mosqueId);
+  const isDers = event.eventType === "Ders";
+  const isMuhadera = event.eventType === "Muhadera";
+  const roleLabel = isDers ? "Teacher" : isMuhadera ? "Speaker" : null;
+  const pendingMembership = isMembershipPending ?? applicationPending;
+  const capacity = event.capacity ?? 0;
+  const bookedCount = event.bookedCount ?? 0;
+  const spotsLeft = capacity > 0 ? Math.max(capacity - bookedCount, 0) : null;
+
+  const getRoleName = (teacher: Event["teacher"]) => {
+    if (teacher && typeof teacher === "object") {
+      const person = teacher as any;
+      const first = person.firstName || "";
+      const last = person.lastName || "";
+      const fullName = `${first} ${last}`.trim();
+      return person.firstName && person.lastName
+        ? `${person.firstName} ${person.lastName}`
+        : fullName || person.username || person.name || person.email || "";
+    }
+    if (typeof teacher === "string") {
+      const looksLikeObjectId = /^[a-f0-9]{24}$/i.test(teacher);
+      return looksLikeObjectId ? "" : teacher;
+    }
+    return "";
+  };
 
   const handleBook = async () => {
     if (!user) {
@@ -70,10 +123,15 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
         </Button>
       );
     }
-    if (isRestricted && !hasMembership && !isMemberOfThisMosque) {
-      if (applicationPending) {
+    if (isRestricted && !hasMembershipForMosque && !isMemberOfThisMosque) {
+      if (pendingMembership) {
         return (
-          <Button disabled className="mt-3 w-full" size="sm" variant="secondary">
+          <Button
+            disabled
+            className="mt-3 w-full"
+            size="sm"
+            variant="secondary"
+          >
             <Clock className="h-4 w-4 mr-1" />
             Application Pending
           </Button>
@@ -124,6 +182,12 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
           {mosqueName && (
             <p className="text-xs font-medium text-accent">{mosqueName}</p>
           )}
+          {roleLabel && (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">{roleLabel}:</span>{" "}
+              {getRoleName(event.teacher) || "TBD"}
+            </p>
+          )}
           <p className="text-sm text-muted-foreground line-clamp-2">
             {event.description}
           </p>
@@ -136,10 +200,10 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
               <MapPin className="h-3.5 w-3.5 text-accent" />
               {event.location}
             </div>
-            {event.capacity && (
+            {capacity > 0 && (
               <div className="flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5 text-accent" />
-                {event.capacity} spots
+                {spotsLeft === 0 ? "Full" : `${spotsLeft} spots left`}
               </div>
             )}
           </div>
@@ -152,7 +216,10 @@ const EventCard = ({ event, isBooked = false, onBooked, isPast = false }: EventC
           open={applyModalOpen}
           onOpenChange={setApplyModalOpen}
           mosqueId={mosqueId}
-          onApplied={() => setApplicationPending(true)}
+          onApplied={() => {
+            setApplicationPending(true);
+            onMembershipApplied?.(mosqueId);
+          }}
         />
       )}
     </>
