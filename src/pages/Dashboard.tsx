@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { searchEvents, Event, getUserBookings, Booking } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  searchEvents,
+  Event,
+  getUserBookings,
+  Booking,
+  getMyMembershipRequests,
+  MembershipRequest,
+} from "@/lib/api";
 import EventCard from "@/components/EventCard";
 import Navbar from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
@@ -7,11 +15,15 @@ import { Button } from "@/components/ui/button";
 import { Search, CalendarDays, Clock } from "lucide-react";
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(true);
   const [bookedEventIds, setBookedEventIds] = useState<Set<string>>(new Set());
+  const [pendingMosqueIds, setPendingMosqueIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -29,14 +41,34 @@ const Dashboard = () => {
   };
 
   const fetchBookings = async () => {
+    if (!user) {
+      setBookedEventIds(new Set());
+      return;
+    }
     try {
       const res = await getUserBookings();
       const ids = new Set<string>(
         res.data.map((b: Booking) =>
-          typeof b.eventId === "string" ? b.eventId : b.eventId._id
-        )
+          typeof b.eventId === "string" ? b.eventId : b.eventId._id,
+        ),
       );
       setBookedEventIds(ids);
+    } catch {
+      // ignore
+    }
+  };
+
+  const fetchPendingMemberships = async () => {
+    if (!user) {
+      setPendingMosqueIds(new Set());
+      return;
+    }
+    try {
+      const res = await getMyMembershipRequests();
+      const pending = (res.data || []).filter(
+        (r: MembershipRequest) => r.status === "pending",
+      );
+      setPendingMosqueIds(new Set(pending.map((r) => r.mosque)));
     } catch {
       // ignore
     }
@@ -45,7 +77,8 @@ const Dashboard = () => {
   useEffect(() => {
     fetchEvents();
     fetchBookings();
-  }, []);
+    fetchPendingMemberships();
+  }, [user]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +87,23 @@ const Dashboard = () => {
 
   const handleBooked = (eventId: string) => {
     setBookedEventIds((prev) => new Set(prev).add(eventId));
+    setEvents((prev) =>
+      prev.map((event) =>
+        event._id === eventId
+          ? { ...event, bookedCount: (event.bookedCount ?? 0) + 1 }
+          : event,
+      ),
+    );
   };
+
+  const handleMembershipApplied = (mosqueId: string) => {
+    setPendingMosqueIds((prev) => new Set(prev).add(mosqueId));
+  };
+
+  const getEventMosqueId = (event: Event) =>
+    typeof event.mosque === "object" && event.mosque
+      ? event.mosque._id
+      : (event.mosque as string) || "";
 
   // Separate upcoming vs recent (past) events
   const now = new Date();
@@ -123,6 +172,10 @@ const Dashboard = () => {
                   event={event}
                   isBooked={bookedEventIds.has(event._id)}
                   onBooked={handleBooked}
+                  isMembershipPending={pendingMosqueIds.has(
+                    getEventMosqueId(event),
+                  )}
+                  onMembershipApplied={handleMembershipApplied}
                 />
               </div>
             ))}
@@ -151,6 +204,10 @@ const Dashboard = () => {
                   isBooked={bookedEventIds.has(event._id)}
                   onBooked={handleBooked}
                   isPast
+                  isMembershipPending={pendingMosqueIds.has(
+                    getEventMosqueId(event),
+                  )}
+                  onMembershipApplied={handleMembershipApplied}
                 />
               </div>
             ))}
