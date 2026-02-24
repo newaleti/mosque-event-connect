@@ -1,11 +1,25 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  createEvent, updateEvent, deleteEvent, searchEvents, getEventAttendance,
-  getMosques, createMosque, assignMosqueAdmin, unassignMosqueAdmin,
-  getMosqueMembershipRequests, decideMembershipRequest,
-  promoteToTeacher, assignTeacherToEvent,
-  Event, Mosque, AttendanceResponse, MembershipRequest,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  searchEvents,
+  getEventAttendance,
+  getMosques,
+  createMosque,
+  assignMosqueAdmin,
+  unassignMosqueAdmin,
+  getMosqueMembershipRequests,
+  decideMembershipRequest,
+  promoteToTeacher,
+  assignTeacherToEvent,
+  getTeachers,
+  Event,
+  Mosque,
+  AttendanceResponse,
+  MembershipRequest,
+  TeacherSummary,
 } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
@@ -15,21 +29,48 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import {
-  CalendarDays, MapPin, Plus, Users, ChevronDown, ChevronUp,
-  Building2, UserCog, Shield, Pencil, Trash2, BarChart3, X, ClipboardList, Search, GraduationCap,
+  CalendarDays,
+  MapPin,
+  Plus,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Building2,
+  UserCog,
+  Shield,
+  Pencil,
+  Trash2,
+  BarChart3,
+  X,
+  ClipboardList,
+  Search,
+  GraduationCap,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 
 /** Format a Date to local "YYYY-MM-DDTHH:mm" for datetime-local inputs */
@@ -47,7 +88,15 @@ const EVENT_TYPES = [
 ];
 
 const emptyEventForm = {
-  title: "", description: "", date: "", location: "", eventType: "Muhadera", capacity: "", image: "",
+  title: "",
+  description: "",
+  date: "",
+  location: "",
+  eventType: "Muhadera",
+  capacity: "",
+  image: "",
+  accessType: "open",
+  teacher: "",
 };
 
 const Admin = () => {
@@ -64,7 +113,8 @@ const Admin = () => {
 
   // Attendance state
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
-  const [attendanceData, setAttendanceData] = useState<AttendanceResponse | null>(null);
+  const [attendanceData, setAttendanceData] =
+    useState<AttendanceResponse | null>(null);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
 
   // Delete confirm
@@ -75,7 +125,11 @@ const Admin = () => {
   const [mosqueName, setMosqueName] = useState<string>("");
   const [showMosqueForm, setShowMosqueForm] = useState(false);
   const [mosqueLoading, setMosqueLoading] = useState(false);
-  const [mosqueForm, setMosqueForm] = useState({ name: "", address: "", description: "" });
+  const [mosqueForm, setMosqueForm] = useState({
+    name: "",
+    address: "",
+    description: "",
+  });
 
   // Assign admin state (super admin)
   const [showAssignForm, setShowAssignForm] = useState(false);
@@ -83,7 +137,9 @@ const Admin = () => {
   const [assignForm, setAssignForm] = useState({ userId: "", mosqueId: "" });
 
   // Membership requests state
-  const [membershipRequests, setMembershipRequests] = useState<MembershipRequest[]>([]);
+  const [membershipRequests, setMembershipRequests] = useState<
+    MembershipRequest[]
+  >([]);
   const [membershipLoading, setMembershipLoading] = useState(false);
   const [membershipSearch, setMembershipSearch] = useState("");
   const [membershipGenderFilter, setMembershipGenderFilter] = useState("");
@@ -94,11 +150,14 @@ const Admin = () => {
   const [teacherAssignEventId, setTeacherAssignEventId] = useState("");
   const [teacherAssignTeacherId, setTeacherAssignTeacherId] = useState("");
   const [teacherAssignLoading, setTeacherAssignLoading] = useState(false);
+  const [teachers, setTeachers] = useState<TeacherSummary[]>([]);
+  const [teacherSearch, setTeacherSearch] = useState("");
+  const [teacherLoading, setTeacherLoading] = useState(false);
   // Stats
   const totalEvents = events.length;
   const totalBookings = useMemo(
     () => events.reduce((sum, e) => sum + ((e as any).bookedCount || 0), 0),
-    [events]
+    [events],
   );
 
   const fetchEvents = async () => {
@@ -117,17 +176,46 @@ const Admin = () => {
   useEffect(() => {
     if (user && isAdmin) {
       fetchEvents();
-      getMosques().then((res) => {
-        const list = res.data || [];
-        setMosques(list);
-        if (isMosqueAdmin && user.assignedMosque) {
-          const found = list.find((m: Mosque) => m._id === user.assignedMosque);
-          if (found) setMosqueName(found.name);
-        }
-      }).catch(() => {});
+      getMosques()
+        .then((res) => {
+          const list = res.data || [];
+          setMosques(list);
+          if (isMosqueAdmin && user.assignedMosque) {
+            const found = list.find(
+              (m: Mosque) => m._id === user.assignedMosque,
+            );
+            if (found) setMosqueName(found.name);
+          }
+        })
+        .catch(() => {});
       if (isMosqueAdmin) fetchMembershipRequests();
     }
   }, [user, isAdmin, isSuperAdmin]);
+
+  useEffect(() => {
+    if (showEventForm) {
+      fetchTeachers();
+    }
+  }, [showEventForm, isMosqueAdmin, isSuperAdmin]);
+
+  const fetchTeachers = async (q?: string) => {
+    setTeacherLoading(true);
+    try {
+      const res = await getTeachers(q ? { q } : undefined);
+      setTeachers(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      toast.error("Failed to load teachers");
+    } finally {
+      setTeacherLoading(false);
+    }
+  };
+
+  const formatTeacherLabel = (teacher: TeacherSummary) => {
+    const name = [teacher.firstName, teacher.lastName]
+      .filter(Boolean)
+      .join(" ");
+    return name || teacher.username || teacher.email;
+  };
 
   const fetchMembershipRequests = async (name?: string, gender?: string) => {
     setMembershipLoading(true);
@@ -147,18 +235,26 @@ const Admin = () => {
   const handleMembershipDecision = async (id: string, status: string) => {
     try {
       await decideMembershipRequest(id, status);
-      toast.success(status === "approved" ? "User upgraded to Student status." : "Request rejected.");
-      fetchMembershipRequests(membershipSearch || undefined, membershipGenderFilter || undefined);
+      toast.success(
+        status === "approved"
+          ? "User upgraded to Student status."
+          : "Request rejected.",
+      );
+      fetchMembershipRequests(
+        membershipSearch || undefined,
+        membershipGenderFilter || undefined,
+      );
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to process request");
     }
   };
 
-  if (authLoading) return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-    </div>
-  );
+  if (authLoading)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
   if (!user) return <Navigate to="/login" />;
   if (!isAdmin) return <Navigate to="/" />;
 
@@ -167,6 +263,13 @@ const Admin = () => {
     e.preventDefault();
     if (new Date(eventForm.date) < new Date()) {
       toast.error("Cannot save an event with a past date.");
+      return;
+    }
+    if (
+      (eventForm.eventType === "Ders" || eventForm.eventType === "Muhadera") &&
+      !eventForm.teacher
+    ) {
+      toast.error("Please select a teacher or speaker.");
       return;
     }
     setLoading(true);
@@ -180,6 +283,8 @@ const Admin = () => {
         capacity: eventForm.capacity ? Number(eventForm.capacity) : 0,
         image: eventForm.image || "https://placehold.co/600x400",
         mosque: user?.assignedMosque || "",
+        accessType: eventForm.accessType,
+        teacher: eventForm.teacher,
       };
 
       if (editingEventId) {
@@ -195,8 +300,13 @@ const Admin = () => {
       fetchEvents();
     } catch (err: any) {
       const msg = err.response?.data?.message || "Failed to save event";
-      if (msg.toLowerCase().includes("not authorized") || err.response?.status === 403) {
-        toast.error("Authorization error: Please log out and log back in to refresh your permissions.");
+      if (
+        msg.toLowerCase().includes("not authorized") ||
+        err.response?.status === 403
+      ) {
+        toast.error(
+          "Authorization error: Please log out and log back in to refresh your permissions.",
+        );
       } else {
         toast.error(msg);
       }
@@ -215,6 +325,11 @@ const Admin = () => {
       eventType: (event as any).eventType || event.category || "Muhadera",
       capacity: String((event as any).capacity || ""),
       image: (event as any).image || "",
+      accessType: (event as any).accessType || "open",
+      teacher:
+        typeof (event as any).teacher === "object"
+          ? (event as any).teacher?._id || ""
+          : (event as any).teacher || "",
     });
     setShowEventForm(true);
   };
@@ -304,11 +419,17 @@ const Admin = () => {
           <div className="flex items-center gap-2 mb-1">
             <Shield className="h-6 w-6 text-accent" />
             <h1 className="font-display text-3xl font-bold text-foreground">
-              {isSuperAdmin ? "Super Admin Dashboard" : mosqueName ? `${mosqueName} Dashboard` : "Mosque Admin Dashboard"}
+              {isSuperAdmin
+                ? "Super Admin Dashboard"
+                : mosqueName
+                  ? `${mosqueName} Dashboard`
+                  : "Mosque Admin Dashboard"}
             </h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            {isSuperAdmin ? "Manage mosques, admins, and events" : "Manage your mosque's events and track attendance"}
+            {isSuperAdmin
+              ? "Manage mosques, admins, and events"
+              : "Manage your mosque's events and track attendance"}
           </p>
         </div>
 
@@ -317,30 +438,42 @@ const Admin = () => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Events</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Events
+                </CardTitle>
                 <CalendarDays className="h-4 w-4 text-accent" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-foreground">{totalEvents}</div>
+                <div className="text-3xl font-bold text-foreground">
+                  {totalEvents}
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Bookings</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Bookings
+                </CardTitle>
                 <Users className="h-4 w-4 text-accent" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-foreground">{totalBookings}</div>
+                <div className="text-3xl font-bold text-foreground">
+                  {totalBookings}
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Avg. per Event</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Avg. per Event
+                </CardTitle>
                 <BarChart3 className="h-4 w-4 text-accent" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-foreground">
-                  {totalEvents > 0 ? Math.round(totalBookings / totalEvents) : 0}
+                  {totalEvents > 0
+                    ? Math.round(totalBookings / totalEvents)
+                    : 0}
                 </div>
               </CardContent>
             </Card>
@@ -380,61 +513,220 @@ const Admin = () => {
               <h2 className="font-display text-xl font-semibold text-foreground">
                 {isMosqueAdmin ? "Your Mosque's Events" : "All Events"}
               </h2>
-              <Button onClick={() => { setShowEventForm(!showEventForm); setEditingEventId(null); setEventForm({ ...emptyEventForm }); }}>
+              <Button
+                onClick={() => {
+                  setShowEventForm(!showEventForm);
+                  setEditingEventId(null);
+                  setEventForm({ ...emptyEventForm });
+                }}
+              >
                 <Plus className="mr-1.5 h-4 w-4" /> New Event
               </Button>
             </div>
 
             {showEventForm && (
-              <form onSubmit={handleSubmitEvent} className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
+              <form
+                onSubmit={handleSubmitEvent}
+                className="space-y-4 rounded-lg border bg-card p-6 shadow-sm"
+              >
                 <div className="flex items-center justify-between">
                   <h2 className="font-display text-xl font-semibold text-card-foreground">
                     {editingEventId ? "Edit Event" : "Create Event"}
                   </h2>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => { setShowEventForm(false); setEditingEventId(null); }}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setShowEventForm(false);
+                      setEditingEventId(null);
+                    }}
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Title</Label>
-                    <Input required value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} />
+                    <Input
+                      required
+                      value={eventForm.title}
+                      onChange={(e) =>
+                        setEventForm({ ...eventForm, title: e.target.value })
+                      }
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Event Type</Label>
-                    <Select value={eventForm.eventType} onValueChange={(v) => setEventForm({ ...eventForm, eventType: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select
+                      value={eventForm.eventType}
+                      onValueChange={(v) =>
+                        setEventForm({
+                          ...eventForm,
+                          eventType: v,
+                          accessType:
+                            v === "Ders"
+                              ? "restricted"
+                              : eventForm.accessType || "open",
+                          teacher:
+                            v === "Ders" || v === "Muhadera"
+                              ? eventForm.teacher
+                              : "",
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {EVENT_TYPES.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
+                    <Label>Access Type</Label>
+                    <Select
+                      value={eventForm.accessType}
+                      onValueChange={(v) =>
+                        setEventForm({ ...eventForm, accessType: v })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="restricted">Restricted</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(eventForm.eventType === "Ders" ||
+                    eventForm.eventType === "Muhadera") && (
+                    <div className="space-y-1.5">
+                      <Label>Teacher/Speaker</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={teacherSearch}
+                          onChange={(e) => setTeacherSearch(e.target.value)}
+                          placeholder="Search teachers by name or email"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fetchTeachers(teacherSearch)}
+                          disabled={teacherLoading}
+                        >
+                          {teacherLoading ? "Searching..." : "Search"}
+                        </Button>
+                      </div>
+                      <Select
+                        value={eventForm.teacher}
+                        onValueChange={(v) =>
+                          setEventForm({ ...eventForm, teacher: v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              teacherLoading ? "Loading..." : "Select teacher"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teachers.length === 0 ? (
+                            <SelectItem value="no-teachers" disabled>
+                              {teacherLoading
+                                ? "Loading teachers..."
+                                : "No teachers found"}
+                            </SelectItem>
+                          ) : (
+                            teachers.map((teacher) => (
+                              <SelectItem key={teacher._id} value={teacher._id}>
+                                {formatTeacherLabel(teacher)}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
                     <Label>Date & Time</Label>
-                    <Input type="datetime-local" required value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} />
+                    <Input
+                      type="datetime-local"
+                      required
+                      value={eventForm.date}
+                      onChange={(e) =>
+                        setEventForm({ ...eventForm, date: e.target.value })
+                      }
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Location</Label>
-                    <Input required value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} />
+                    <Input
+                      required
+                      value={eventForm.location}
+                      onChange={(e) =>
+                        setEventForm({ ...eventForm, location: e.target.value })
+                      }
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Capacity (0 = unlimited)</Label>
-                    <Input type="number" value={eventForm.capacity} onChange={(e) => setEventForm({ ...eventForm, capacity: e.target.value })} />
+                    <Input
+                      type="number"
+                      value={eventForm.capacity}
+                      onChange={(e) =>
+                        setEventForm({ ...eventForm, capacity: e.target.value })
+                      }
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Image URL</Label>
-                    <Input value={eventForm.image} onChange={(e) => setEventForm({ ...eventForm, image: e.target.value })} placeholder="https://example.com/image.jpg" />
+                    <Input
+                      value={eventForm.image}
+                      onChange={(e) =>
+                        setEventForm({ ...eventForm, image: e.target.value })
+                      }
+                      placeholder="https://example.com/image.jpg"
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Description</Label>
-                  <Textarea required value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} />
+                  <Textarea
+                    required
+                    value={eventForm.description}
+                    onChange={(e) =>
+                      setEventForm({
+                        ...eventForm,
+                        description: e.target.value,
+                      })
+                    }
+                  />
                 </div>
                 <div className="flex gap-3">
-                  <Button type="submit" disabled={loading}>{loading ? "Saving..." : editingEventId ? "Update Event" : "Create Event"}</Button>
-                  <Button type="button" variant="outline" onClick={() => { setShowEventForm(false); setEditingEventId(null); }}>Cancel</Button>
+                  <Button type="submit" disabled={loading}>
+                    {loading
+                      ? "Saving..."
+                      : editingEventId
+                        ? "Update Event"
+                        : "Create Event"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowEventForm(false);
+                      setEditingEventId(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </form>
             )}
@@ -443,55 +735,98 @@ const Admin = () => {
               {events.length === 0 && (
                 <div className="rounded-lg border bg-card p-12 text-center">
                   <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">No events yet. Create your first event!</p>
+                  <p className="text-muted-foreground">
+                    No events yet. Create your first event!
+                  </p>
                 </div>
               )}
               {events.map((event) => (
-                <div key={event._id} className="rounded-lg border bg-card shadow-sm">
+                <div
+                  key={event._id}
+                  className="rounded-lg border bg-card shadow-sm"
+                >
                   <div className="flex items-center justify-between p-5">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-display text-lg font-semibold text-card-foreground">{event.title}</h3>
-                        <Badge variant="secondary" className="text-xs">{(event as any).eventType || event.category || "Event"}</Badge>
+                        <h3 className="font-display text-lg font-semibold text-card-foreground">
+                          {event.title}
+                        </h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {(event as any).eventType ||
+                            event.category ||
+                            "Event"}
+                        </Badge>
                         {(event as any).bookedCount > 0 && (
                           <Badge variant="outline" className="text-xs">
-                            <Users className="h-3 w-3 mr-1" /> {(event as any).bookedCount} booked
+                            <Users className="h-3 w-3 mr-1" />{" "}
+                            {(event as any).bookedCount} booked
                           </Badge>
                         )}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <CalendarDays className="h-3.5 w-3.5 text-accent" />
-                          {(() => { try { return format(new Date(event.date), "MMM d, yyyy · h:mm a"); } catch { return event.date; } })()}
+                          {(() => {
+                            try {
+                              return format(
+                                new Date(event.date),
+                                "MMM d, yyyy · h:mm a",
+                              );
+                            } catch {
+                              return event.date;
+                            }
+                          })()}
                         </span>
                         <span className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5 text-accent" />{event.location}
+                          <MapPin className="h-3.5 w-3.5 text-accent" />
+                          {event.location}
                         </span>
                         {(event as any).capacity > 0 && (
                           <span className="text-muted-foreground">
-                            Capacity: {(event as any).bookedCount || 0}/{(event as any).capacity}
+                            Capacity: {(event as any).bookedCount || 0}/
+                            {(event as any).capacity}
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 ml-4 shrink-0">
-                      <Button variant="ghost" size="sm" onClick={() => viewAttendees(event._id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => viewAttendees(event._id)}
+                      >
                         <Users className="h-4 w-4 mr-1" /> Attendees
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => startEdit(event)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => startEdit(event)}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       {deleteConfirmId === event._id ? (
                         <div className="flex items-center gap-1">
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteEvent(event._id)}>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteEvent(event._id)}
+                          >
                             Confirm
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmId(null)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteConfirmId(null)}
+                          >
                             Cancel
                           </Button>
                         </div>
                       ) : (
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteConfirmId(event._id)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteConfirmId(event._id)}
+                        >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
@@ -506,7 +841,9 @@ const Admin = () => {
           {isMosqueAdmin && (
             <TabsContent value="membership" className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                <h2 className="font-display text-xl font-semibold text-foreground">Membership Requests</h2>
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  Membership Requests
+                </h2>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <div className="relative flex-1 sm:flex-initial">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -514,15 +851,29 @@ const Admin = () => {
                       placeholder="Search by name..."
                       value={membershipSearch}
                       onChange={(e) => setMembershipSearch(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") fetchMembershipRequests(membershipSearch || undefined, membershipGenderFilter || undefined); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter")
+                          fetchMembershipRequests(
+                            membershipSearch || undefined,
+                            membershipGenderFilter || undefined,
+                          );
+                      }}
                       className="pl-9 sm:w-48"
                     />
                   </div>
-                  <Select value={membershipGenderFilter} onValueChange={(v) => {
-                    setMembershipGenderFilter(v === "all" ? "" : v);
-                    fetchMembershipRequests(membershipSearch || undefined, v === "all" ? undefined : v);
-                  }}>
-                    <SelectTrigger className="w-32"><SelectValue placeholder="Gender" /></SelectTrigger>
+                  <Select
+                    value={membershipGenderFilter}
+                    onValueChange={(v) => {
+                      setMembershipGenderFilter(v === "all" ? "" : v);
+                      fetchMembershipRequests(
+                        membershipSearch || undefined,
+                        v === "all" ? undefined : v,
+                      );
+                    }}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="Gender" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
                       <SelectItem value="male">Male</SelectItem>
@@ -539,7 +890,9 @@ const Admin = () => {
               ) : membershipRequests.length === 0 ? (
                 <div className="rounded-lg border bg-card p-12 text-center">
                   <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">No membership requests.</p>
+                  <p className="text-muted-foreground">
+                    No membership requests.
+                  </p>
                 </div>
               ) : (
                 <div className="rounded-md border">
@@ -558,23 +911,60 @@ const Admin = () => {
                     <TableBody>
                       {membershipRequests.map((req, i) => (
                         <TableRow key={req._id}>
-                          <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                          <TableCell className="font-medium">{req.user?.firstName && req.user?.lastName ? `${req.user.firstName} ${req.user.lastName}` : req.user?.username || "N/A"}</TableCell>
-                          <TableCell>{req.user?.phoneNumber || req.user?.phone || "N/A"}</TableCell>
-                          <TableCell className="capitalize">{req.user?.gender || "N/A"}</TableCell>
-                          <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">{req.message || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {i + 1}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {req.user?.firstName && req.user?.lastName
+                              ? `${req.user.firstName} ${req.user.lastName}`
+                              : req.user?.username || "N/A"}
+                          </TableCell>
                           <TableCell>
-                            <Badge variant={req.status === "approved" ? "default" : req.status === "rejected" ? "destructive" : "secondary"}>
+                            {req.user?.phoneNumber || req.user?.phone || "N/A"}
+                          </TableCell>
+                          <TableCell className="capitalize">
+                            {req.user?.gender || "N/A"}
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                            {req.message || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                req.status === "approved"
+                                  ? "default"
+                                  : req.status === "rejected"
+                                    ? "destructive"
+                                    : "secondary"
+                              }
+                            >
                               {req.status}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             {req.status === "pending" && (
                               <div className="flex justify-end gap-1">
-                                <Button size="sm" onClick={() => handleMembershipDecision(req._id, "approved")}>
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    handleMembershipDecision(
+                                      req._id,
+                                      "approved",
+                                    )
+                                  }
+                                >
                                   Approve
                                 </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleMembershipDecision(req._id, "rejected")}>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() =>
+                                    handleMembershipDecision(
+                                      req._id,
+                                      "rejected",
+                                    )
+                                  }
+                                >
                                   Reject
                                 </Button>
                               </div>
@@ -593,8 +983,13 @@ const Admin = () => {
           {isMosqueAdmin && (
             <TabsContent value="teachers" className="space-y-6">
               <div className="space-y-4">
-                <h2 className="font-display text-xl font-semibold text-foreground">Promote Member to Teacher</h2>
-                <p className="text-sm text-muted-foreground">Enter a user ID of a mosque member to promote them to teacher role.</p>
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  Promote Member to Teacher
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Enter a user ID of a mosque member to promote them to teacher
+                  role.
+                </p>
                 <div className="flex gap-3 max-w-lg">
                   <Input
                     placeholder="User ID"
@@ -611,34 +1006,51 @@ const Admin = () => {
                         toast.success("User promoted to Teacher successfully");
                         setTeacherPromoteId("");
                       } catch (err: any) {
-                        toast.error(err.response?.data?.message || "Failed to promote user");
+                        toast.error(
+                          err.response?.data?.message ||
+                            "Failed to promote user",
+                        );
                       } finally {
                         setTeacherPromoteLoading(false);
                       }
                     }}
                   >
                     <GraduationCap className="h-4 w-4 mr-1" />
-                    {teacherPromoteLoading ? "Promoting..." : "Promote to Teacher"}
+                    {teacherPromoteLoading
+                      ? "Promoting..."
+                      : "Promote to Teacher"}
                   </Button>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h2 className="font-display text-xl font-semibold text-foreground">Assign Teacher to Event</h2>
-                <p className="text-sm text-muted-foreground">Assign a teacher to a Ders or Muhadera event.</p>
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  Assign Teacher to Event
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Assign a teacher to a Ders or Muhadera event.
+                </p>
                 <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
                   <div className="space-y-1.5">
                     <Label>Event (Ders/Muhadera only)</Label>
-                    <Select value={teacherAssignEventId} onValueChange={setTeacherAssignEventId}>
-                      <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
+                    <Select
+                      value={teacherAssignEventId}
+                      onValueChange={setTeacherAssignEventId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select event" />
+                      </SelectTrigger>
                       <SelectContent>
                         {events
                           .filter((e) => {
-                            const type = (e as any).eventType || e.category || "";
+                            const type =
+                              (e as any).eventType || e.category || "";
                             return type === "Ders" || type === "Muhadera";
                           })
                           .map((e) => (
-                            <SelectItem key={e._id} value={e._id}>{e.title}</SelectItem>
+                            <SelectItem key={e._id} value={e._id}>
+                              {e.title}
+                            </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
@@ -648,21 +1060,33 @@ const Admin = () => {
                     <Input
                       placeholder="Teacher's User ID"
                       value={teacherAssignTeacherId}
-                      onChange={(e) => setTeacherAssignTeacherId(e.target.value)}
+                      onChange={(e) =>
+                        setTeacherAssignTeacherId(e.target.value)
+                      }
                     />
                   </div>
                 </div>
                 <Button
-                  disabled={teacherAssignLoading || !teacherAssignEventId || !teacherAssignTeacherId}
+                  disabled={
+                    teacherAssignLoading ||
+                    !teacherAssignEventId ||
+                    !teacherAssignTeacherId
+                  }
                   onClick={async () => {
                     setTeacherAssignLoading(true);
                     try {
-                      await assignTeacherToEvent(teacherAssignEventId, teacherAssignTeacherId);
+                      await assignTeacherToEvent(
+                        teacherAssignEventId,
+                        teacherAssignTeacherId,
+                      );
                       toast.success("Teacher assigned to event successfully");
                       setTeacherAssignEventId("");
                       setTeacherAssignTeacherId("");
                     } catch (err: any) {
-                      toast.error(err.response?.data?.message || "Failed to assign teacher");
+                      toast.error(
+                        err.response?.data?.message ||
+                          "Failed to assign teacher",
+                      );
                     } finally {
                       setTeacherAssignLoading(false);
                     }
@@ -683,25 +1107,64 @@ const Admin = () => {
               </div>
 
               {showMosqueForm && (
-                <form onSubmit={handleCreateMosque} className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
-                  <h2 className="font-display text-xl font-semibold text-card-foreground">Add Mosque</h2>
+                <form
+                  onSubmit={handleCreateMosque}
+                  className="space-y-4 rounded-lg border bg-card p-6 shadow-sm"
+                >
+                  <h2 className="font-display text-xl font-semibold text-card-foreground">
+                    Add Mosque
+                  </h2>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label>Mosque Name</Label>
-                      <Input required value={mosqueForm.name} onChange={(e) => setMosqueForm({ ...mosqueForm, name: e.target.value })} placeholder="e.g. Al-Aqsa Mosque" />
+                      <Input
+                        required
+                        value={mosqueForm.name}
+                        onChange={(e) =>
+                          setMosqueForm({ ...mosqueForm, name: e.target.value })
+                        }
+                        placeholder="e.g. Al-Aqsa Mosque"
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Address</Label>
-                      <Input required value={mosqueForm.address} onChange={(e) => setMosqueForm({ ...mosqueForm, address: e.target.value })} placeholder="Full address" />
+                      <Input
+                        required
+                        value={mosqueForm.address}
+                        onChange={(e) =>
+                          setMosqueForm({
+                            ...mosqueForm,
+                            address: e.target.value,
+                          })
+                        }
+                        placeholder="Full address"
+                      />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label>Description</Label>
-                    <Textarea value={mosqueForm.description} onChange={(e) => setMosqueForm({ ...mosqueForm, description: e.target.value })} placeholder="Optional description" />
+                    <Textarea
+                      value={mosqueForm.description}
+                      onChange={(e) =>
+                        setMosqueForm({
+                          ...mosqueForm,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Optional description"
+                    />
                   </div>
                   <div className="flex gap-3">
-                    <Button type="submit" disabled={mosqueLoading}>{mosqueLoading ? "Creating..." : "Add Mosque"}</Button>
-                    <Button type="button" variant="outline" onClick={() => setShowMosqueForm(false)}>Cancel</Button>
+                    <Button type="submit" disabled={mosqueLoading}>
+                      {mosqueLoading ? "Creating..." : "Add Mosque"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowMosqueForm(false)}
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </form>
               )}
@@ -710,18 +1173,28 @@ const Admin = () => {
                 {mosques.length === 0 && (
                   <div className="rounded-lg border bg-card p-12 text-center">
                     <Building2 className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                    <p className="text-muted-foreground">No mosques added yet.</p>
+                    <p className="text-muted-foreground">
+                      No mosques added yet.
+                    </p>
                   </div>
                 )}
                 {mosques.map((mosque) => (
-                  <div key={mosque._id} className="rounded-lg border bg-card p-5 shadow-sm">
+                  <div
+                    key={mosque._id}
+                    className="rounded-lg border bg-card p-5 shadow-sm"
+                  >
                     <h3 className="font-display text-lg font-semibold text-card-foreground flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-accent" /> {mosque.name}
+                      <Building2 className="h-4 w-4 text-accent" />{" "}
+                      {mosque.name}
                     </h3>
                     <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
                       <MapPin className="h-3.5 w-3.5" /> {mosque.address}
                     </p>
-                    {mosque.description && <p className="mt-2 text-sm text-muted-foreground">{mosque.description}</p>}
+                    {mosque.description && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {mosque.description}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -738,29 +1211,64 @@ const Admin = () => {
               </div>
 
               {showAssignForm && (
-                <form onSubmit={handleAssignAdmin} className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
-                  <h2 className="font-display text-xl font-semibold text-card-foreground">Assign Mosque Admin</h2>
-                  <p className="text-sm text-muted-foreground">Enter the User ID and select a mosque to assign them as admin.</p>
+                <form
+                  onSubmit={handleAssignAdmin}
+                  className="space-y-4 rounded-lg border bg-card p-6 shadow-sm"
+                >
+                  <h2 className="font-display text-xl font-semibold text-card-foreground">
+                    Assign Mosque Admin
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Enter the User ID and select a mosque to assign them as
+                    admin.
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label>User ID</Label>
-                      <Input required value={assignForm.userId} onChange={(e) => setAssignForm({ ...assignForm, userId: e.target.value })} placeholder="Paste the user's ID" />
+                      <Input
+                        required
+                        value={assignForm.userId}
+                        onChange={(e) =>
+                          setAssignForm({
+                            ...assignForm,
+                            userId: e.target.value,
+                          })
+                        }
+                        placeholder="Paste the user's ID"
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Mosque</Label>
-                      <Select value={assignForm.mosqueId} onValueChange={(v) => setAssignForm({ ...assignForm, mosqueId: v })}>
-                        <SelectTrigger><SelectValue placeholder="Select a mosque" /></SelectTrigger>
+                      <Select
+                        value={assignForm.mosqueId}
+                        onValueChange={(v) =>
+                          setAssignForm({ ...assignForm, mosqueId: v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a mosque" />
+                        </SelectTrigger>
                         <SelectContent>
                           {mosques.map((m) => (
-                            <SelectItem key={m._id} value={m._id}>{m.name}</SelectItem>
+                            <SelectItem key={m._id} value={m._id}>
+                              {m.name}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <Button type="submit" disabled={assignLoading}>{assignLoading ? "Assigning..." : "Assign Admin"}</Button>
-                    <Button type="button" variant="outline" onClick={() => setShowAssignForm(false)}>Cancel</Button>
+                    <Button type="submit" disabled={assignLoading}>
+                      {assignLoading ? "Assigning..." : "Assign Admin"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowAssignForm(false)}
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </form>
               )}
@@ -770,13 +1278,21 @@ const Admin = () => {
                   <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">To unassign a mosque admin, enter their User ID below.</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    To unassign a mosque admin, enter their User ID below.
+                  </p>
                   <div className="flex gap-3 max-w-md">
-                    <Input id="unassign-user-id" placeholder="User ID to unassign" className="flex-1" />
+                    <Input
+                      id="unassign-user-id"
+                      placeholder="User ID to unassign"
+                      className="flex-1"
+                    />
                     <Button
                       variant="destructive"
                       onClick={() => {
-                        const input = document.getElementById("unassign-user-id") as HTMLInputElement;
+                        const input = document.getElementById(
+                          "unassign-user-id",
+                        ) as HTMLInputElement;
                         if (input?.value) {
                           handleUnassignAdmin(input.value);
                           input.value = "";
@@ -796,7 +1312,10 @@ const Admin = () => {
       </div>
 
       {/* Attendance Dialog */}
-      <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
+      <Dialog
+        open={attendanceDialogOpen}
+        onOpenChange={setAttendanceDialogOpen}
+      >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -805,12 +1324,18 @@ const Admin = () => {
             </DialogTitle>
           </DialogHeader>
           {attendanceLoading ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">Loading attendance...</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Loading attendance...
+            </p>
           ) : !attendanceData || attendanceData.attendees.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">No attendees yet.</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No attendees yet.
+            </p>
           ) : (
             <div className="space-y-4">
-              <Badge className="text-sm">{attendanceData.totalAttendees} Total Attendees</Badge>
+              <Badge className="text-sm">
+                {attendanceData.totalAttendees} Total Attendees
+              </Badge>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -819,6 +1344,7 @@ const Admin = () => {
                       <TableHead>Name</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Gender</TableHead>
+                      <TableHead>Age</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Booking Date</TableHead>
                     </TableRow>
@@ -826,13 +1352,33 @@ const Admin = () => {
                   <TableBody>
                     {attendanceData.attendees.map((a, i) => (
                       <TableRow key={a._id}>
-                        <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="font-medium">{a.user?.firstName && a.user?.lastName ? `${a.user.firstName} ${a.user.lastName}` : a.user?.username || "N/A"}</TableCell>
-                        <TableCell>{a.user?.phoneNumber || a.user?.phone || "N/A"}</TableCell>
-                        <TableCell className="capitalize">{a.user?.gender || "N/A"}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {i + 1}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {a.user?.firstName && a.user?.lastName
+                            ? `${a.user.firstName} ${a.user.lastName}`
+                            : a.user?.username || "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          {a.user?.phoneNumber || a.user?.phone || "N/A"}
+                        </TableCell>
+                        <TableCell className="capitalize">
+                          {a.user?.gender || "N/A"}
+                        </TableCell>
+                        <TableCell>{a.user?.age ?? "N/A"}</TableCell>
                         <TableCell>{a.user?.email || "N/A"}</TableCell>
                         <TableCell className="text-muted-foreground">
-                          {(() => { try { return format(new Date(a.bookingDate), "MMM d, yyyy"); } catch { return "N/A"; } })()}
+                          {(() => {
+                            try {
+                              return format(
+                                new Date(a.bookingDate),
+                                "MMM d, yyyy",
+                              );
+                            } catch {
+                              return "N/A";
+                            }
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -842,7 +1388,12 @@ const Admin = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAttendanceDialogOpen(false)}>Close</Button>
+            <Button
+              variant="outline"
+              onClick={() => setAttendanceDialogOpen(false)}
+            >
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
