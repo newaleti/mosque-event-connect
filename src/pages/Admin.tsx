@@ -110,6 +110,10 @@ const Admin = () => {
   const [loading, setLoading] = useState(false);
   const [eventForm, setEventForm] = useState({ ...emptyEventForm });
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [eventTypeFilter, setEventTypeFilter] = useState("all");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+  const [mosqueFilter, setMosqueFilter] = useState("");
 
   // Attendance state
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
@@ -165,6 +169,17 @@ const Admin = () => {
       const params: Record<string, string> = {};
       if (isMosqueAdmin && user?.assignedMosque) {
         params.mosque = user.assignedMosque;
+      } else if (mosqueFilter) {
+        params.mosque = mosqueFilter;
+      }
+      if (eventTypeFilter && eventTypeFilter !== "all") {
+        params.category = eventTypeFilter;
+      }
+      if (startDateFilter) {
+        params.startDate = startDateFilter;
+      }
+      if (endDateFilter) {
+        params.endDate = endDateFilter;
       }
       const res = await searchEvents(params);
       setEvents(res.data.events || []);
@@ -185,12 +200,26 @@ const Admin = () => {
               (m: Mosque) => m._id === user.assignedMosque,
             );
             if (found) setMosqueName(found.name);
+            setMosqueFilter(user.assignedMosque);
           }
         })
         .catch(() => {});
       if (isMosqueAdmin) fetchMembershipRequests();
     }
   }, [user, isAdmin, isSuperAdmin]);
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchEvents();
+    }
+  }, [
+    eventTypeFilter,
+    startDateFilter,
+    endDateFilter,
+    mosqueFilter,
+    user,
+    isAdmin,
+  ]);
 
   useEffect(() => {
     if (showEventForm) {
@@ -522,6 +551,67 @@ const Admin = () => {
               >
                 <Plus className="mr-1.5 h-4 w-4" /> New Event
               </Button>
+            </div>
+
+            <div className="grid gap-3 rounded-lg border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-1.5">
+                <Label>Type</Label>
+                <Select
+                  value={eventTypeFilter}
+                  onValueChange={setEventTypeFilter}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {EVENT_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>From</Label>
+                <Input
+                  type="date"
+                  value={startDateFilter}
+                  onChange={(e) => setStartDateFilter(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>To</Label>
+                <Input
+                  type="date"
+                  value={endDateFilter}
+                  onChange={(e) => setEndDateFilter(e.target.value)}
+                />
+              </div>
+              {isSuperAdmin ? (
+                <div className="space-y-1.5">
+                  <Label>Mosque</Label>
+                  <Select value={mosqueFilter} onValueChange={setMosqueFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All mosques" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Mosques</SelectItem>
+                      {mosques.map((mosque) => (
+                        <SelectItem key={mosque._id} value={mosque._id}>
+                          {mosque.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label>Mosque</Label>
+                  <Input value={mosqueName || "Your mosque"} disabled />
+                </div>
+              )}
             </div>
 
             {showEventForm && (
