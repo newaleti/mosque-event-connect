@@ -208,18 +208,11 @@ const Admin = () => {
     }
   }, [user, isAdmin, isSuperAdmin]);
 
-  useEffect(() => {
+  const handleApplyEventFilters = () => {
     if (user && isAdmin) {
       fetchEvents();
     }
-  }, [
-    eventTypeFilter,
-    startDateFilter,
-    endDateFilter,
-    mosqueFilter,
-    user,
-    isAdmin,
-  ]);
+  };
 
   useEffect(() => {
     if (showEventForm) {
@@ -612,6 +605,15 @@ const Admin = () => {
                   <Input value={mosqueName || "Your mosque"} disabled />
                 </div>
               )}
+            </div>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleApplyEventFilters}
+              >
+                Apply Filters
+              </Button>
             </div>
 
             {showEventForm && (
