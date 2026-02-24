@@ -247,14 +247,16 @@ const TeacherDashboard = () => {
                       {event.location}
                     </span>
                   </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => openAttendance(event)}>
-                      <ClipboardCheck className="h-4 w-4 mr-1" /> Attendance
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => openMarklist(event)}>
-                      <FileSpreadsheet className="h-4 w-4 mr-1" /> Marklist
-                    </Button>
-                  </div>
+                  {event.eventType === "Ders" && (
+                    <div className="flex gap-2 pt-2">
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => openAttendance(event)}>
+                        <ClipboardCheck className="h-4 w-4 mr-1" /> Attendance
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => openMarklist(event)}>
+                        <FileSpreadsheet className="h-4 w-4 mr-1" /> Marklist
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

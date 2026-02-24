@@ -21,6 +21,19 @@ export interface User {
   role: string;
   assignedMosque?: string;
   membershipStatus?: string;
+  mosqueMemberships?: Array<{
+    mosque: string;
+    status: "none" | "student" | "official_member";
+  }>;
+}
+
+export interface TeacherSummary {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email: string;
+  assignedMosque?: string;
 }
 
 // Map backend user shape to our User interface
@@ -31,6 +44,7 @@ const mapUser = (backendUser: any): User => ({
   role: backendUser.role || "user",
   assignedMosque: backendUser.assignedMosque,
   membershipStatus: backendUser.membershipStatus || "none",
+  mosqueMemberships: backendUser.mosqueMemberships || [],
 });
 
 export interface Event {
@@ -42,6 +56,7 @@ export interface Event {
   category?: string;
   eventType?: string;
   capacity?: number;
+  bookedCount?: number;
   createdBy?: string;
   accessType?: string;
   mosque?: { _id: string; name: string } | string;
@@ -67,12 +82,24 @@ export const loginUser = async (email: string, password: string) => {
   };
 };
 
-export const registerUser = (name: string, email: string, password: string, phone?: string, gender?: string) =>
-  api.post("/auth/register", { name, email, password, phone, gender });
+export const registerUser = (data: {
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  password: string;
+  age?: number;
+  gender?: string;
+  phoneNumber?: string;
+}) => api.post("/auth/register", data);
 
 // Events
-export const searchEvents = (params?: { keyword?: string; location?: string; category?: string; mosque?: string }) =>
-  api.get<{ events: Event[] }>("/events/search", { params });
+export const searchEvents = (params?: {
+  keyword?: string;
+  location?: string;
+  category?: string;
+  mosque?: string;
+}) => api.get<{ events: Event[] }>("/events/search", { params });
 
 export const createEvent = (data: Record<string, any>) =>
   api.post<Event>("/events", data);
@@ -80,15 +107,13 @@ export const createEvent = (data: Record<string, any>) =>
 export const updateEvent = (id: string, data: Record<string, any>) =>
   api.put<Event>(`/events/${id}`, data);
 
-export const deleteEvent = (id: string) =>
-  api.delete(`/events/${id}`);
+export const deleteEvent = (id: string) => api.delete(`/events/${id}`);
 
 // Bookings
 export const createBooking = (eventId: string) =>
   api.post<Booking>("/bookings", { eventId });
 
-export const cancelBooking = (id: string) =>
-  api.delete(`/bookings/${id}`);
+export const cancelBooking = (id: string) => api.delete(`/bookings/${id}`);
 
 export const getUserBookings = () =>
   api.get<Booking[]>("/bookings/my-bookings");
@@ -98,7 +123,17 @@ export interface AttendanceResponse {
   totalAttendees: number;
   attendees: Array<{
     _id: string;
-    user: { _id: string; firstName?: string; lastName?: string; username?: string; email: string; phoneNumber?: string; phone?: string; gender?: string };
+    user: {
+      _id: string;
+      firstName?: string;
+      lastName?: string;
+      username?: string;
+      email: string;
+      phoneNumber?: string;
+      phone?: string;
+      gender?: string;
+      age?: number;
+    };
     bookingDate: string;
   }>;
 }
@@ -107,7 +142,15 @@ export const getEventAttendance = (eventId: string) =>
   api.get<AttendanceResponse>(`/bookings/event/${eventId}`);
 
 export const getEventStudents = (eventId: string) =>
-  api.get<Array<{ _id: string; firstName?: string; lastName?: string; username?: string; email: string }>>(`/bookings/event-students/${eventId}`);
+  api.get<
+    Array<{
+      _id: string;
+      firstName?: string;
+      lastName?: string;
+      username?: string;
+      email: string;
+    }>
+  >(`/events/event-students/${eventId}`);
 
 // Mosques
 export interface Mosque {
@@ -118,11 +161,13 @@ export interface Mosque {
   location?: { type: string; coordinates: number[] };
 }
 
-export const getMosques = () =>
-  api.get<Mosque[]>("/mosques");
+export const getMosques = () => api.get<Mosque[]>("/mosques");
 
-export const createMosque = (data: { name: string; address: string; description?: string }) =>
-  api.post<Mosque>("/mosques", data);
+export const createMosque = (data: {
+  name: string;
+  address: string;
+  description?: string;
+}) => api.post<Mosque>("/mosques", data);
 
 // Admin management
 export const assignMosqueAdmin = (userId: string, mosqueId: string) =>
@@ -136,10 +181,15 @@ export const promoteToTeacher = (userId: string) =>
   api.patch(`/auth/assign-teacher/${userId}`);
 
 export const assignTeacherToEvent = (eventId: string, teacherId: string) =>
-  api.patch(`/auth/assign-teacher-to-event/${eventId}`, { teacherId });
+  api.patch(`/events/assign-teacher-to-event/${eventId}`, { teacherId });
 
 export const getTeacherEvents = (teacherId: string) =>
-  api.get<{ events: Event[] }>("/events/search", { params: { teacher: teacherId } });
+  api.get<{ events: Event[] }>("/events/search", {
+    params: { teacher: teacherId },
+  });
+
+export const getTeachers = (params?: { q?: string }) =>
+  api.get<TeacherSummary[]>("/auth/teachers", { params });
 
 // Attendance
 export interface AttendanceRecord {
@@ -160,8 +210,11 @@ export interface AttendanceEntry {
   }>;
 }
 
-export const submitAttendance = (eventId: string, records: AttendanceRecord[], date?: string) =>
-  api.post("/attendance/submit", { eventId, records, date });
+export const submitAttendance = (
+  eventId: string,
+  records: AttendanceRecord[],
+  date?: string,
+) => api.post("/attendance/submit", { eventId, records, date });
 
 export const getEventAttendanceRecords = (eventId: string) =>
   api.get<AttendanceEntry[]>(`/attendance/${eventId}`);
@@ -197,20 +250,47 @@ export const getEventMarklist = (eventId: string) =>
 // Membership
 export interface MembershipRequest {
   _id: string;
-  user: { _id: string; firstName?: string; lastName?: string; username?: string; email: string; phoneNumber?: string; phone?: string; gender?: string; age?: number };
+  user: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    email: string;
+    phoneNumber?: string;
+    phone?: string;
+    gender?: string;
+    age?: number;
+  };
   mosque: string;
+  role?: "student" | "teacher";
+  knowledgeLevel?: "Beginner" | "Nezer Quran" | "Quran Hifz" | "Kitabs";
+  experienceYears?: number;
+  specialization?: string;
+  previousExperience?: string;
   message: string;
   status: string;
   createdAt: string;
 }
 
-export const applyForMembership = (mosqueId: string, message: string) =>
-  api.post("/membership/apply", { mosqueId, message });
+export const applyForMembership = (data: {
+  mosqueId: string;
+  role: "student" | "teacher";
+  message: string;
+  knowledgeLevel?: "Beginner" | "Nezer Quran" | "Quran Hifz" | "Kitabs";
+  experienceYears?: number;
+  specialization?: string;
+  previousExperience?: string;
+}) => api.post("/membership/apply", data);
 
-export const getMosqueMembershipRequests = (params?: { name?: string; gender?: string }) =>
-  api.get<MembershipRequest[]>("/membership/mosque-requests", { params });
+export const getMosqueMembershipRequests = (params?: {
+  name?: string;
+  gender?: string;
+}) => api.get<MembershipRequest[]>("/membership/mosque-requests", { params });
 
 export const decideMembershipRequest = (id: string, status: string) =>
   api.put(`/membership/${id}/decide`, { status });
+
+export const getMyMembershipRequests = () =>
+  api.get<MembershipRequest[]>("/membership/my-requests");
 
 export default api;
